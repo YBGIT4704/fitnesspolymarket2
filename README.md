@@ -105,12 +105,14 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 ### **Tech Stack for MVP (1 Week)**
 
 - **Frontend:**
-    - **React** (for building the app)
-    - **React Router** (for navigation between views)
-    - **Styled Components** (for styling) or **Tailwind CSS**
+  - **React 18** with **TypeScript** (for building the app)
+  - **Vite** (for fast development and building)
+  - **Tailwind CSS** (for styling and responsive design)
+  - **React Hooks** (for state management)
 - **Backend:**
-    - **Firebase** or **Supabase** (for user authentication, database, and backend logic).
-    - **Node.js** (if custom development is used).
+  - **Supabase** (for user authentication, database, and file storage)
+  - **PostgreSQL** (via Supabase for data storage)
+  - **Supabase Storage** (for image uploads)
 - **Database Schema (for Pledges & Bets)**
 
 ```json
@@ -204,3 +206,146 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
     - **Full MVP flow tested**.
     - **Leaderboard and profile page** implemented.
     - Ready for **first user testing**.
+
+---
+
+## **Setup Instructions**
+
+### **Prerequisites**
+- Node.js (v18 or higher)
+- npm or yarn
+- Supabase account
+
+### **1. Clone and Install Dependencies**
+```bash
+cd fitlock-app
+npm install
+```
+
+### **2. Set up Supabase**
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings > API to get your project URL and anon key
+3. Copy `env.example` to `.env` and fill in your Supabase credentials:
+```bash
+cp env.example .env
+```
+
+### **3. Database Setup**
+Run these SQL commands in your Supabase SQL editor:
+
+```sql
+-- Create users table
+CREATE TABLE users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  gbp_balance INTEGER DEFAULT 1000,
+  profile_picture TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create pledges table
+CREATE TABLE pledges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  creator_id UUID REFERENCES users(id) NOT NULL,
+  goal TEXT NOT NULL,
+  deadline DATE NOT NULL,
+  stake INTEGER NOT NULL,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed', 'completed', 'failed')),
+  image_url TEXT,
+  proof_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create bets table
+CREATE TABLE bets (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) NOT NULL,
+  pledge_id UUID REFERENCES pledges(id) NOT NULL,
+  side TEXT NOT NULL CHECK (side IN ('yes', 'no')),
+  amount INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, pledge_id)
+);
+
+-- Create verification_votes table
+CREATE TABLE verification_votes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) NOT NULL,
+  pledge_id UUID REFERENCES pledges(id) NOT NULL,
+  vote TEXT NOT NULL CHECK (vote IN ('yes', 'no')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, pledge_id)
+);
+
+-- Create storage bucket for images
+INSERT INTO storage.buckets (id, name, public) VALUES ('pledge-images', 'pledge-images', true);
+
+-- Set up RLS policies
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pledges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verification_votes ENABLE ROW LEVEL SECURITY;
+
+-- Users can read and update their own data
+CREATE POLICY "Users can read own data" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own data" ON users FOR UPDATE USING (auth.uid() = id);
+
+-- Pledges are public to read, users can create their own
+CREATE POLICY "Pledges are viewable by everyone" ON pledges FOR SELECT USING (true);
+CREATE POLICY "Users can create pledges" ON pledges FOR INSERT WITH CHECK (auth.uid() = creator_id);
+
+-- Bets are viewable by everyone, users can create their own
+CREATE POLICY "Bets are viewable by everyone" ON bets FOR SELECT USING (true);
+CREATE POLICY "Users can create bets" ON bets FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Verification votes are viewable by everyone, users can create their own
+CREATE POLICY "Votes are viewable by everyone" ON verification_votes FOR SELECT USING (true);
+CREATE POLICY "Users can create votes" ON verification_votes FOR INSERT WITH CHECK (auth.uid() = user_id);
+```
+
+### **4. Start Development Server**
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`
+
+### **5. Production Build**
+```bash
+npm run build
+npm run preview
+```
+
+---
+
+## **Project Structure**
+```
+fitlock-app/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── PledgeCard.tsx   # Individual pledge display
+│   │   ├── PledgeFeed.tsx   # Scrollable pledge list
+│   │   ├── CreatePledge.tsx # Pledge creation form
+│   │   ├── MyPledges.tsx    # User's created pledges
+│   │   ├── MyBets.tsx       # User's placed bets
+│   │   ├── Profile.tsx      # User profile and stats
+│   │   └── LoadingSpinner.tsx
+│   ├── pages/               # Main page components
+│   │   ├── LoginPage.tsx    # Email authentication
+│   │   └── MainApp.tsx      # Main app with navigation
+│   ├── hooks/               # Custom React hooks
+│   │   └── useAuth.ts       # Authentication logic
+│   ├── lib/                 # External service configs
+│   │   └── supabase.ts      # Supabase client setup
+│   ├── types/               # TypeScript type definitions
+│   │   └── index.ts         # Database and app types
+│   ├── App.tsx              # Main app component
+│   └── main.tsx             # App entry point
+├── public/                  # Static assets
+├── tailwind.config.js       # Tailwind CSS configuration
+├── vite.config.ts           # Vite configuration
+└── package.json             # Dependencies and scripts
+```
