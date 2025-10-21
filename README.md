@@ -23,16 +23,16 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 
 ### **2. Bottom Navigation (Tabs)**
 
-- **Tabs Structure:**
-    - **Big Plus in the middle**: Button for **"Make a Pledge"**.
-    - **"My Pledges"**: View all active and completed pledges the user has created.
-    - **"My Bets"**: View all bets the user has placed on other pledges.
+- **Navigation Structure:**
+    - **Feed**: Scrollable list of all pledges from other users
+    - **Make a Pledge (Big Plus)**: Central button for creating new pledges
+    - **My Pledges**: View all pledges the user has created (active and completed)
+    - **My Bets**: View all bets the user has placed on other pledges
     
-    **Example Bottom Nav Layout:**
-    
-    - **Home / Feed**: (scrollable feed with pledges)
-    - **Make a Pledge (Big Plus)**: For creating new pledges.
-    - **My Bets**: For managing bets placed on others.
+    **Bottom Navigation Layout:**
+    ```
+    [Feed] [➕ Make Pledge] [My Pledges] [My Bets]
+    ```
 
 ---
 
@@ -50,13 +50,13 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 ### **4. Pledge Creation Flow**
 
 - **User Flow:**
-    - User clicks **“Create a Pledge”** button (from the **plus button**).
+    - User clicks **"Create a Pledge"** button (from the **plus button**).
     - User:
-        - Enters a **goal description** (e.g., “I will hit a 100kg bench by Jan 1”).
-        - Uploads a **picture**.
-        - **Sets stake** (e.g., £50).
-        - **Selects proof method** (e.g., Strava, video).
-        - Chooses a **deadline** for goal completion.
+        - Enters a **goal description** (e.g., "I will hit a 100kg bench by Jan 1").
+        - Uploads a **picture** (optional, max 5MB, JPG/PNG/WebP).
+        - **Sets stake** (e.g., £50, minimum £1).
+        - **Selects proof method** (photo, video, or Strava link).
+        - Chooses a **deadline** for goal completion (minimum 1 day, maximum 1 year).
     - Once created, the pledge is added to the **scrollable feed**.
 
 ---
@@ -75,30 +75,57 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 ### **6. Verification Process**
 
 - **User Flow:**
-    - **Pledger** submits proof of goal completion by the deadline.
-    - **Friends vote** on the proof (Yes/No).
-    - **Majority vote wins** (e.g., 2/3 votes required for success).
-    - **Outcome** is displayed (YES or NO).
-    - The **betting pool** is split between the correct bettors.
+    - **Pledger** submits proof of goal completion by the deadline (photo, video, or Strava link)
+    - **Community voting** opens for 48 hours after proof submission
+    - **Any registered user** can vote on the proof (Yes/No)
+    - **Voting Rules:**
+        - Minimum 3 votes required for verification
+        - Majority vote wins (e.g., 3/5 votes = success)
+        - If tied, pledger wins (benefit of doubt)
+        - Users cannot vote on their own pledges
+    - **Outcome** is displayed (YES or NO) after voting period
+    - The **betting pool** is split between the correct bettors
 
 ---
 
 ### **7. Result Calculation & Pool Split**
 
-- **User Flow:**
-    - System calculates **who owes what** based on the bet results.
-    - The **pledger’s stake** is returned (if successful) + a portion of the **betting pool**.
-    - The pool is split between the correct bettors (YES or NO), and the results are displayed with a **summary of all bets**.
+- **Pool Distribution Logic:**
+    - **If Pledger Succeeds (YES wins):**
+        - Pledger gets their stake back + 50% of the betting pool
+        - YES bettors split remaining 50% proportionally by stake amount
+        - NO bettors lose their entire bet amount
+    - **If Pledger Fails (NO wins):**
+        - Pledger loses their entire stake
+        - NO bettors split the total pool (pledger's stake + all bets) proportionally by stake amount
+        - YES bettors lose their entire bet amount
+    - **Platform Fee:** 5% of total pool goes to platform (deducted before distribution)
+    - **Results Summary:** Shows all bettors, amounts won/lost, and final balances
 
 ---
 
-### **8. Leaderboard & Profile**
+### **8. User Balance & Funding**
+
+- **Initial Balance:**
+    - New users start with **£100 mock balance** (no real money)
+    - Balance is used for both creating pledges and placing bets
+- **Balance Management:**
+    - Users can "top up" their balance with mock funds (for testing)
+    - Minimum bet amount: **£1**
+    - Maximum bet amount: **User's current balance**
+    - Insufficient balance prevents betting or pledge creation
+- **Balance Display:**
+    - Current balance shown in profile and navigation
+    - Transaction history available in profile
+
+### **9. Leaderboard & Profile**
 
 - **User Flow:**
     - Users can see a **leaderboard** showing:
-        - Top **achievers** (most completed pledges).
-        - Top **predictors** (most accurate bettors).
-    - User profile shows **success rate** (pledges completed) and **betting accuracy**.
+        - Top **achievers** (most completed pledges)
+        - Top **predictors** (most accurate bettors)
+        - Top **earners** (highest profit from betting)
+    - User profile shows **success rate** (pledges completed) and **betting accuracy**
 
 ---
 
@@ -113,36 +140,11 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
   - **Supabase** (for user authentication, database, and file storage)
   - **PostgreSQL** (via Supabase for data storage)
   - **Supabase Storage** (for image uploads)
-- **Database Schema (for Pledges & Bets)**
-
-```json
-{
-  "users": [
-    {"id": "u1", "name": "Yousaf", "email": "yousaf@example.com", "gbp_balance": 1000, "profile_picture": "image_url"}
-  ],
-  "pledges": [
-    {
-      "id": "p1",
-      "creator_id": "u1",
-      "goal": "Run 5k under 25min",
-      "deadline": "2025-11-30",
-      "stake": 50,
-      "status": "open",
-      "image_url": "image_url",
-      "bets": [
-        {"user_id": "u2", "side": "yes", "amount": 10},
-        {"user_id": "u3", "side": "no", "amount": 20}
-      ],
-      "proof_url": "",
-      "verification_votes": [
-        {"user_id": "u2", "vote": "yes"},
-        {"user_id": "u3", "vote": "no"}
-      ]
-    }
-  ]
-}
-
-```
+- **Database Schema Overview:**
+  - **users**: User profiles with balance and authentication
+  - **pledges**: Fitness goals with stakes and deadlines  
+  - **bets**: Individual bets placed on pledges
+  - **verification_votes**: Community voting on proof submissions
 
 ---
 
@@ -225,10 +227,19 @@ npm install
 ### **2. Set up Supabase**
 1. Create a new project at [supabase.com](https://supabase.com)
 2. Go to Settings > API to get your project URL and anon key
-3. Copy `env.example` to `.env` and fill in your Supabase credentials:
+3. Create a `.env` file in the `fitlock-app` directory with your Supabase credentials:
 ```bash
-cp env.example .env
+# Create .env file
+touch .env
 ```
+
+Add the following environment variables to your `.env` file:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Replace `your_supabase_project_url` and `your_supabase_anon_key` with your actual Supabase credentials.
 
 ### **3. Database Setup**
 Run these SQL commands in your Supabase SQL editor:
@@ -318,6 +329,52 @@ The app will be available at `http://localhost:5173`
 npm run build
 npm run preview
 ```
+
+### **6. Testing**
+```bash
+# Run tests (when implemented)
+npm test
+
+# Run linting
+npm run lint
+
+# Type checking
+npm run type-check
+```
+
+### **7. Error Handling**
+- **Network errors**: Graceful fallbacks with retry options
+- **Authentication errors**: Clear login prompts and session management
+- **File upload errors**: Size and format validation with user feedback
+- **Balance errors**: Insufficient funds warnings and prevention
+- **Database errors**: User-friendly error messages and logging
+
+### **8. Deployment**
+```bash
+# Build for production
+npm run build
+
+# Deploy to Vercel/Netlify (recommended)
+# Connect your GitHub repo to Vercel/Netlify
+# Set environment variables in deployment platform
+```
+
+---
+
+## **Troubleshooting**
+
+### **Common Issues**
+- **Supabase connection errors**: Verify your `.env` file has correct URL and key
+- **Image upload fails**: Check file size (max 5MB) and format (JPG/PNG/WebP)
+- **Authentication issues**: Clear browser cache and try logging in again
+- **Database errors**: Ensure all SQL commands were run in Supabase SQL editor
+- **Build errors**: Delete `node_modules` and run `npm install` again
+
+### **Development Tips**
+- Use browser dev tools to debug API calls
+- Check Supabase logs for database errors
+- Test with different user accounts to verify permissions
+- Use mock data for testing before real user interactions
 
 ---
 
