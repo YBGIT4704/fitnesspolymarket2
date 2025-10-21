@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Pledge } from '../types'
+import type { Pledge } from '../types'
 import { useAuth } from '../hooks/useAuth'
 
 const MyPledges = () => {

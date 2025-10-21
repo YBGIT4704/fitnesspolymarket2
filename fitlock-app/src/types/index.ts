@@ -42,13 +42,3 @@ export interface VerificationVote {
   created_at?: string
   user?: User
 }
-
-export interface AuthUser {
-  id: string
-  email: string
-  user_metadata?: {
-    name?: string
-    profile_picture?: string
-    gbp_balance?: number
-  }
-}

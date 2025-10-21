@@ -1,3 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-polymarket-dark: #0a0a0a;
+  --color-polymarket-card: #1a1a1a;
+  --color-polymarket-border: #2a2a2a;
+  --color-polymarket-text: #ffffff;
+  --color-polymarket-text-muted: #a0a0a0;
+  --color-polymarket-accent: #3b82f6;
+  --color-polymarket-success: #10b981;
+  --color-polymarket-danger: #ef4444;
+
+  --font-family-sans: Inter, system-ui, sans-serif;
+}

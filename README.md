@@ -383,26 +383,27 @@ npm run build
 fitlock-app/
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   ├── PledgeCard.tsx   # Individual pledge display
-│   │   ├── PledgeFeed.tsx   # Scrollable pledge list
-│   │   ├── CreatePledge.tsx # Pledge creation form
-│   │   ├── MyPledges.tsx    # User's created pledges
-│   │   ├── MyBets.tsx       # User's placed bets
-│   │   ├── Profile.tsx      # User profile and stats
-│   │   └── LoadingSpinner.tsx
-│   ├── pages/               # Main page components
-│   │   ├── LoginPage.tsx    # Email authentication
-│   │   └── MainApp.tsx      # Main app with navigation
+│   │   ├── PledgeCard.tsx      # Individual pledge display
+│   │   ├── PledgeDetailModal.tsx # Pledge detail modal
+│   │   ├── CreatePledge.tsx    # Pledge creation form
+│   │   ├── MyPledges.tsx       # User's created pledges
+│   │   ├── MyBets.tsx          # User's placed bets
+│   │   ├── HowItWorks.tsx      # How it works component
+│   │   └── LoadingSpinner.tsx  # Loading spinner
 │   ├── hooks/               # Custom React hooks
 │   │   └── useAuth.ts       # Authentication logic
 │   ├── lib/                 # External service configs
 │   │   └── supabase.ts      # Supabase client setup
 │   ├── types/               # TypeScript type definitions
 │   │   └── index.ts         # Database and app types
-│   ├── App.tsx              # Main app component
-│   └── main.tsx             # App entry point
+│   ├── utils/               # Utility functions
+│   │   └── payoutCalculator.ts # Payout calculation logic
+│   ├── App.tsx              # Main app component (with Supabase integration)
+│   ├── main.tsx             # App entry point
+│   └── index.css            # Global styles (Tailwind imports)
 ├── public/                  # Static assets
 ├── tailwind.config.js       # Tailwind CSS configuration
+├── postcss.config.js        # PostCSS configuration
 ├── vite.config.ts           # Vite configuration
 └── package.json             # Dependencies and scripts
 ```
