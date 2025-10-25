@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { useAuth } from './hooks/useAuth'
+import LoginForm from './components/LoginForm'
+import AuthCallback from './components/AuthCallback'
 import PledgeCard from './components/PledgeCard'
 import PledgeDetailModal from './components/PledgeDetailModal'
 import CreatePledge from './components/CreatePledge'
@@ -13,15 +15,30 @@ import type { Pledge } from './types'
 type TabType = 'browse' | 'make' | 'my-pledges' | 'my-bets' | 'how-it-works'
 
 function App() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, userProfile, signOut } = useAuth()
+  const [isAuthCallback, setIsAuthCallback] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('browse')
   const [pledges, setPledges] = useState<Pledge[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPledge, setSelectedPledge] = useState<Pledge | null>(null)
   const [showCreatePledge, setShowCreatePledge] = useState(false)
 
-  // Use mock balance if no user (for demo purposes)
-  const userBalance = user?.user_metadata?.gbp_balance || 1000
+  // Check if this is an auth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('code') || window.location.pathname.includes('/auth/callback')) {
+      setIsAuthCallback(true)
+    }
+  }, [])
+
+  // Use user profile balance or default
+  const userBalance = userProfile?.gbp_balance || 1000
+
+  // Show auth callback component
+  if (isAuthCallback) {
+    return <AuthCallback onAuthSuccess={() => setIsAuthCallback(false)} />
+  }
 
   // Fetch pledges from Supabase
   const fetchPledges = async () => {
@@ -56,16 +73,16 @@ function App() {
   }
 
   useEffect(() => {
-    // Only fetch when auth loading is done
-    if (!authLoading) {
-      fetchPledges()
-    }
-  }, [authLoading])
+    // Fetch pledges for everyone (guests and logged-in users)
+    fetchPledges()
+  }, [])
 
   // Handle placing a bet
   const handlePlaceBet = async (pledgeId: string, side: 'yes' | 'no', amount: number) => {
     if (!user) {
-      alert('Please log in to place bets. For now, this is demo mode.')
+      alert('Please sign in to place bets.')
+      setShowLoginModal(true)
+      setSelectedPledge(null)
       return
     }
 
@@ -104,7 +121,10 @@ function App() {
   // Handle creating a pledge
   const handleCreatePledge = async (goal: string, deadline: string, stake: number) => {
     if (!user) {
-      alert('Please log in to create pledges. For now, this is demo mode.')
+      alert('Please sign in to create pledges.')
+      setShowLoginModal(true)
+      setShowCreatePledge(false)
+      setActiveTab('browse')
       return
     }
 
@@ -145,6 +165,11 @@ function App() {
   // Render content based on active tab
   const renderContent = () => {
     if (activeTab === 'make' || showCreatePledge) {
+      if (!user) {
+        setShowLoginModal(true)
+        setActiveTab('browse')
+        return null
+      }
       return (
         <CreatePledge
           userBalance={userBalance}
@@ -162,15 +187,41 @@ function App() {
     }
 
     if (activeTab === 'my-pledges') {
+      if (!user) {
+        return (
+          <div className="text-center py-12">
+            <p className="text-polymarket-text-muted text-lg mb-4">Please sign in to view your pledges</p>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="px-6 py-3 bg-polymarket-accent hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          </div>
+        )
+      }
       return <MyPledges />
     }
 
     if (activeTab === 'my-bets') {
+      if (!user) {
+        return (
+          <div className="text-center py-12">
+            <p className="text-polymarket-text-muted text-lg mb-4">Please sign in to view your bets</p>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="px-6 py-3 bg-polymarket-accent hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          </div>
+        )
+      }
       return <MyBets />
     }
 
     // Browse tab (default)
-    if (loading || authLoading) {
+    if (loading) {
       return <LoadingSpinner />
     }
 
@@ -208,19 +259,31 @@ function App() {
               <h1 className="text-xl font-bold text-polymarket-text">FitLock</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 px-4 py-2 bg-polymarket-card rounded-lg">
-                <span className="text-sm text-polymarket-text font-medium">£{userBalance}</span>
-              </div>
               {user ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-polymarket-accent rounded-full flex items-center justify-center">
-                    <span className="text-sm font-bold text-white">
-                      {user.user_metadata?.name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                    </span>
+                <>
+                  <div className="flex items-center space-x-2 px-4 py-2 bg-polymarket-card rounded-lg">
+                    <span className="text-sm text-polymarket-text font-medium">£{userBalance}</span>
                   </div>
-                </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-polymarket-text-muted">
+                      {userProfile?.name || user?.email?.split('@')[0] || 'User'}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        const { error } = await signOut()
+                        if (error) console.error('Sign out error:', error)
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-polymarket-text-muted hover:text-polymarket-text transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </>
               ) : (
-                <button className="px-4 py-2 text-sm font-medium text-white bg-polymarket-accent rounded-lg hover:bg-blue-600">
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="px-4 py-2 bg-polymarket-accent hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                >
                   Sign In
                 </button>
               )}
@@ -305,6 +368,23 @@ function App() {
           </button>
         </div>
       </nav>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-md w-full">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute -top-4 -right-4 w-10 h-10 bg-polymarket-card rounded-full flex items-center justify-center text-polymarket-text-muted hover:text-polymarket-text transition-colors z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <LoginForm onLoginSuccess={() => setShowLoginModal(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Pledge Detail Modal */}
       {selectedPledge && (

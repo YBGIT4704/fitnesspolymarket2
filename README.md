@@ -8,16 +8,41 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 
 ---
 
+## **🚀 Current Implementation Status**
+
+**What's Working Now:**
+- 🏠 Full tab-based navigation (Browse, My Pledges, Make, My Bets, How It Works)
+- 👤 **Guest browsing** - users can browse pledges without signing in
+- 🔐 **Authentication** - Google OAuth + Magic Link login (UI implemented, needs Supabase configuration)
+- 🔒 Sign In button in header, with modal login form
+- 📋 Browse feed displaying open pledges in a responsive grid
+- 💰 Complete betting system with live odds and payout calculations
+- 📊 Advanced payout calculator (potential returns, profit calculations, pool odds)
+- ✍️ Pledge creation modal with goal, stake, and deadline
+- 📱 Fully responsive UI with Polymarket-inspired dark theme
+- 🎓 "How It Works" educational page with examples
+- ✅ Protected routes - auth required for creating pledges, placing bets, viewing My Pledges/Bets
+
+**What's Missing:**
+- ⚙️ Supabase auth provider configuration (Google OAuth + SMTP for magic links)
+- 🏆 Pledge resolution & verification system
+- 👥 Community voting on proof
+- 🎖️ Profile pages & leaderboards
+- 📸 Image uploads for pledges
+
+---
+
 ### **Core Features for MVP (1-Week Build)**
 
 ---
 
-### **1. Onboarding (Email-based Login)**
+### **1. Onboarding (Google OAuth + Magic Link)**
 
 - **User Flow:**
-    - User enters **email address**.
-    - System sends a **code to their email** for login.
-    - User enters the **code** to log in.
+    - **Option 1:** User clicks **"Continue with Google"** for instant login
+    - **Option 2:** User enters **email address** and receives a **magic link**
+    - User clicks the **magic link** in their email to log in
+    - **No passwords or codes required** - seamless authentication
 
 ---
 
@@ -166,48 +191,90 @@ FitLock is a **fitness accountability platform** where users create **fitness pl
 
 ### **1-Week MVP Build Plan**
 
-### **Day 1-2: Onboarding & Pledge Creation**
+### **Current Progress Status**
 
-- Build **email login** (user enters email, receives code).
-- Create **pledge creation form** (goal, stake, proof, deadline).
-- Add **user profile picture upload**.
-- Store **pledge data** in the database.
+#### ✅ **Completed (Days 1-4 equivalent)**
+- ✅ **Core UI Framework**: Tab-based navigation (Browse, My Pledges, Make, My Bets, How It Works)
+- ✅ **Pledge Feed**: Scrollable grid of pledge cards showing open pledges
+- ✅ **Pledge Creation Flow**: Full modal form with goal, stake, deadline inputs
+- ✅ **Betting Interface**: PledgeDetailModal with YES/NO betting, live odds, payout calculator
+- ✅ **Payout Calculations**: Complete utilities for odds, potential payouts, and pool distribution
+- ✅ **My Pledges**: View user's created pledges with status
+- ✅ **My Bets**: View user's placed bets with current status
+- ✅ **How It Works**: Comprehensive informational page explaining the platform
+- ✅ **Supabase Integration**: Database queries, nested relationships (pledges + creator + bets)
+- ✅ **Auth Hook Structure**: useAuth hook created (ready for implementation)
+- ✅ **Balance System**: Mock GBP balance tracking (£1000 default)
 
-### **Day 3-4: Betting & Feed Display**
+#### 🚧 **In Progress / Remaining Work**
 
-- Build **scrollable pledge feed** with picture, goal, and bet button.
-- Implement **betting interface** (YES/NO, GBP stake).
-- Track **bets and stakes** in the database.
+**Authentication (Day 1-2 equivalent - UI DONE, NEEDS CONFIG)**
+- ✅ Email OTP (Magic Link) login UI implemented
+- ✅ Google OAuth login UI implemented
+- ✅ User registration flow (creates user profile automatically on first login)
+- ✅ Profile picture from Google OAuth
+- ⚙️ **NEEDS SETUP:** Google OAuth configuration in Google Cloud Console
+- ⚙️ **NEEDS SETUP:** SMTP configuration for magic link emails (or use Supabase default with limits)
 
-### **Day 5-6: Verification & Result Calculation**
+**Verification & Results (Day 5-6 equivalent - NOT DONE)**
+- ❌ Proof submission UI (upload photo/video/Strava)
+- ❌ Community voting interface
+- ❌ Pledge resolution workflow
+- ❌ Automatic payout distribution on resolution
+- ❌ Winner/loser summary display
 
-- Implement **proof submission** and **social voting** for verification.
-- Develop **result calculation** and split betting pool based on outcome.
-- Display **winner/loser summary** and pool split.
+**Profile & Leaderboard (Day 7 equivalent - NOT DONE)**
+- ❌ User profile page with stats
+- ❌ Leaderboard (top achievers, predictors, earners)
+- ❌ Transaction history
 
-### **Day 7: Leaderboard & Polish**
-
-- Create **leaderboard** showing top achievers and bettors.
-- Final **testing** of the entire flow (pledge creation → betting → verification → result).
-- **Bug fixing** and final polish.
+**Additional Polish Needed**
+- ❌ Image upload for pledge creation (backend structure exists)
+- ❌ Real-time updates via Supabase subscriptions
+- ❌ Better error handling (replace alerts with toast notifications)
+- ❌ Pagination for pledge feed
+- ❌ Loading states improvements
+- ❌ Transactional balance updates (currently has race condition risk)
 
 ---
 
-### **Key Milestones for the Week**
+### **Next Steps to Complete MVP**
 
-1. **End of Day 2**:
-    - Completed **onboarding** and **pledge creation** flow.
-    - **Profile** setup and data storage.
-2. **End of Day 4**:
-    - **Betting interface** completed.
-    - **Feed display** showing user pledges.
-3. **End of Day 6**:
-    - **Verification system** in place (social voting).
-    - **Result calculation** and pool splitting working.
-4. **End of Day 7**:
-    - **Full MVP flow tested**.
-    - **Leaderboard and profile page** implemented.
-    - Ready for **first user testing**.
+1. **Phase 1: Authentication Configuration (Priority: HIGH - 1-2 hours)**
+   - ✅ Email OTP login UI - DONE
+   - ✅ Wire up useAuth hook to Supabase auth - DONE
+   - ✅ User registration with name/email - DONE
+   - ⚙️ **TODO:** Set up Google OAuth in Google Cloud Console (follow instructions in section 2.3)
+   - ⚙️ **TODO:** Configure SMTP for magic links or accept Supabase rate limits for testing
+   - ⚙️ **TODO:** Test login/logout flows after configuration
+
+2. **Phase 2: Pledge Resolution Flow (Priority: HIGH)**
+   - Add proof submission UI to MyPledges
+   - Build community voting interface
+   - Implement pledge status transitions (open → closed → completed/failed)
+   - Trigger payout distribution from payoutCalculator utilities
+   - Show results and payouts to users
+
+3. **Phase 3: Profile & Social Features (Priority: MEDIUM)**
+   - Create profile page with user stats
+   - Build leaderboard with top users
+   - Add transaction history
+
+4. **Phase 4: Polish & Production Readiness (Priority: MEDIUM)**
+   - Add image uploads for pledges
+   - Implement toast notifications
+   - Add real-time updates
+   - Optimize with pagination
+   - Fix balance transaction race conditions
+
+---
+
+### **Estimated Remaining Time**
+- **Phase 1 (Auth)**: 1-2 days
+- **Phase 2 (Resolution)**: 2-3 days
+- **Phase 3 (Profile/Social)**: 1-2 days
+- **Phase 4 (Polish)**: 1-2 days
+- **Total**: ~5-9 days to complete full MVP
 
 ---
 
@@ -225,9 +292,16 @@ npm install
 ```
 
 ### **2. Set up Supabase**
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to Settings > API to get your project URL and anon key
-3. Create a `.env` file in the `fitlock-app` directory with your Supabase credentials:
+
+#### **2.1 Create Supabase Project**
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Choose a region close to your users
+3. Wait for the project to be ready (usually 2-3 minutes)
+
+#### **2.2 Get API Credentials**
+1. Go to **Settings > API** in your Supabase dashboard
+2. Copy your **Project URL** and **anon public** key
+3. Create a `.env` file in the `fitlock-app` directory:
 ```bash
 # Create .env file
 touch .env
@@ -239,7 +313,56 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-Replace `your_supabase_project_url` and `your_supabase_anon_key` with your actual Supabase credentials.
+#### **2.3 Configure Authentication Providers**
+
+**Google OAuth Setup:**
+1. Go to **Authentication > Providers** in your Supabase dashboard
+2. Enable **Google** provider
+3. Go to [Google Cloud Console](https://console.cloud.google.com/)
+4. Create a new project or select existing one
+5. Enable **Google+ API** and **Google Identity API**
+6. Go to **Credentials > Create Credentials > OAuth 2.0 Client ID**
+7. Set **Application type** to "Web application"
+8. Add **Authorized redirect URIs:**
+   - `https://tgiufdsjpffwauuhskar.supabase.co/auth/v1/callback`
+   - `http://localhost:5173/auth/callback` (for local development)
+   - `http://localhost:5174/auth/callback` (alternative port)
+9. Copy **Client ID** and **Client Secret** to Supabase Google provider settings
+10. **IMPORTANT:** In Supabase Google provider settings, enable "Skip nonce verification" temporarily for development
+
+**Magic Link Setup:**
+1. Go to **Authentication > Settings** in your Supabase dashboard
+2. Under **General Settings**, configure:
+   - **Site URL:** `http://localhost:5173` (for development)
+3. Under **Redirect URLs**, add:
+   - `http://localhost:5173/auth/callback`
+   - `http://localhost:5174/auth/callback` (alternative port)
+4. **IMPORTANT:** Under **SMTP Settings** (for Magic Link emails):
+   - By default, Supabase rate-limits emails severely on free tier (3-4 per hour)
+   - For testing, you can use Supabase's built-in email service (limited)
+   - For production, configure custom SMTP (Gmail, SendGrid, etc.)
+5. Magic Link is automatically enabled once SMTP is configured
+
+**Troubleshooting Auth Issues:**
+
+**Issue: "This site can't be reached" when using Google OAuth**
+- Check that your Google Cloud Console redirect URI EXACTLY matches: `https://tgiufdsjpffwauuhskar.supabase.co/auth/v1/callback`
+- Verify you copied the Client ID and Secret correctly to Supabase
+- Make sure Google OAuth is enabled in Supabase Auth > Providers
+- Wait a few minutes after saving changes for them to propagate
+
+**Issue: "Failed to send magic link"**
+- Check Supabase logs in Dashboard > Logs for detailed error messages
+- Verify your email isn't rate-limited (Supabase free tier has strict limits)
+- If using custom SMTP, verify your SMTP credentials are correct
+- Try disabling "Confirm email" requirement in Auth Settings if testing locally
+- Alternative: Use a custom email service like Resend or SendGrid for production
+
+#### **2.4 Configure Email Templates (Optional)**
+1. Go to **Authentication > Email Templates** in Supabase
+2. Customize the **Magic Link** template with your branding
+3. Set **Subject:** "Your FitLock Magic Link"
+4. Update the email content as needed
 
 ### **3. Database Setup**
 Run these SQL commands in your Supabase SQL editor:
@@ -383,6 +506,8 @@ npm run build
 fitlock-app/
 ├── src/
 │   ├── components/          # Reusable UI components
+│   │   ├── LoginForm.tsx       # Google OAuth + Magic Link login
+│   │   ├── AuthCallback.tsx    # Authentication callback handler
 │   │   ├── PledgeCard.tsx      # Individual pledge display
 │   │   ├── PledgeDetailModal.tsx # Pledge detail modal
 │   │   ├── CreatePledge.tsx    # Pledge creation form

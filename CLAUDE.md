@@ -10,14 +10,16 @@ FitLock is a fitness accountability platform combining fitness pledges with a Po
 
 ## File Structure
 
-**IMPORTANT:** The working directory is `/Users/yousafbilal/Coding/Fitness Polymarket 2 - Web/fitlock-app/`.
+**IMPORTANT:** The git repository root is `/Users/yousafbilal/Coding/Fitness Polymarket 2 - Web/` which contains:
+  - `fitlock-app/` - The actual React application (cd into this to run npm commands)
+  - `README.md` - Project documentation (at repo root)
+  - `CLAUDE.md` - This file (at repo root)
 
-- The parent directory is `/Users/yousafbilal/Coding/Fitness Polymarket 2 - Web/` which contains:
-  - `fitlock-app/` - The actual React application (THIS IS THE WORKING DIRECTORY)
-  - `README.md` - Project documentation
-  - `CLAUDE.md` - This file (one level up from fitlock-app/)
-
-**All commands must be run from the `fitlock-app/` directory, which is already the current working directory.**
+**The default working directory will be the repository root. To run npm commands, use absolute paths or cd into fitlock-app:**
+```bash
+# Example: run dev server
+cd "/Users/yousafbilal/Coding/Fitness Polymarket 2 - Web/fitlock-app" && npm run dev
+```
 
 ## Development Commands
 
@@ -51,11 +53,15 @@ Access via `import.meta.env.VITE_SUPABASE_URL` in code.
 ## Architecture Patterns
 
 ### Authentication Flow
-- Uses Supabase OTP authentication (email-based, no passwords)
+- **Authentication is OPTIONAL** - guests can browse pledges without signing in
+- Uses Supabase authentication: Google OAuth + Magic Link (email OTP, no passwords)
 - Custom `useAuth()` hook (`src/hooks/useAuth.ts`) manages auth state globally
 - Hook subscribes to `supabase.auth.onAuthStateChange()` for real-time session updates
-- Components access auth via `const { user, signInWithEmail, verifyOtp, signOut } = useAuth()`
-- User object includes metadata: `user.user_metadata.{ name, profile_picture, gbp_balance }`
+- Components access auth via `const { user, userProfile, signOut } = useAuth()`
+- User balance from `userProfile?.gbp_balance` (stored in `users` table, not auth metadata)
+- Sign In button in header opens modal with `LoginForm` component
+- Protected actions (create pledge, place bet) prompt login if guest
+- Auth callback handled by `AuthCallback.tsx` component which creates/updates user profile
 
 ### State Management
 - **No Redux/Context** - uses React hooks + Supabase as single source of truth
@@ -65,10 +71,12 @@ Access via `import.meta.env.VITE_SUPABASE_URL` in code.
 - Parent components pass `onUpdate()` callbacks to children for triggering data refreshes after mutations
 
 ### Navigation
-- **No React Router** - tab-based navigation managed in `MainApp.tsx`
-- State: `[activeTab, setActiveTab] = useState<'feed' | 'my-pledges' | 'my-bets' | 'profile'>()`
-- Bottom fixed navigation bar with central "+" button for pledge creation
-- CreatePledge component renders as modal overlay (not inline)
+- **No React Router** - tab-based navigation managed in `App.tsx` (main entry point)
+- State: `[activeTab, setActiveTab] = useState<'browse' | 'make' | 'my-pledges' | 'my-bets' | 'how-it-works'>()`
+- Bottom fixed navigation bar with 5 tabs: Browse, My Pledges, Make (center +), My Bets, How It Works
+- CreatePledge component renders as modal overlay when activeTab is 'make' or showCreatePledge is true
+- Protected tabs (My Pledges, My Bets, Make) show "Sign In" prompt for guests
+- Browse and How It Works are public (no auth required)
 
 ### Supabase Integration Patterns
 
@@ -99,26 +107,30 @@ await supabase.from('users')
 
 ```
 src/
-├── main.tsx                      # React root initialization
-├── App.tsx                       # Landing/demo UI (not main app entry)
-├── pages/
-│   ├── LoginPage.tsx             # Email OTP auth (2-step: email → code)
-│   └── MainApp.tsx               # Main app container with tab navigation
+├── main.tsx                      # React root initialization (renders App)
+├── App.tsx                       # Main app with tab navigation + Supabase integration + auth modal
 ├── components/
-│   ├── PledgeFeed.tsx            # Displays all open pledges
-│   ├── PledgeCard.tsx            # Individual pledge card + betting interface
+│   ├── PledgeCard.tsx            # Individual pledge card (click to open detail modal)
+│   ├── PledgeDetailModal.tsx    # Modal for viewing pledge details + placing bets
 │   ├── CreatePledge.tsx          # Pledge creation modal form
-│   ├── MyPledges.tsx             # User's created pledges
-│   ├── MyBets.tsx                # User's placed bets
-│   ├── Profile.tsx               # User stats and achievements
+│   ├── LoginForm.tsx             # Login form (Google OAuth + Magic Link)
+│   ├── AuthCallback.tsx          # Auth callback handler (creates/updates user profile)
+│   ├── MyPledges.tsx             # User's created pledges tab (auth required)
+│   ├── MyBets.tsx                # User's placed bets tab (auth required)
+│   ├── HowItWorks.tsx            # Informational page explaining platform
 │   └── LoadingSpinner.tsx        # Reusable loading spinner
 ├── hooks/
-│   └── useAuth.ts                # Authentication logic (global auth state)
+│   └── useAuth.ts                # Authentication logic (global auth state, signOut)
 ├── lib/
 │   └── supabase.ts               # Supabase client initialization
-└── types/
-    └── index.ts                  # All TypeScript interfaces
+├── types/
+│   └── index.ts                  # All TypeScript interfaces (User, Pledge, Bet, VerificationVote)
+├── utils/
+│   └── payoutCalculator.ts       # Payout calculation logic (odds, potential payouts)
+└── index.css                     # Global styles + Tailwind v4 theme configuration
 ```
+
+**Note:** There is no `pages/` directory. `App.tsx` handles all routing via tab state and manages login modal state.
 
 ### Data Flow Pattern
 
@@ -130,10 +142,11 @@ src/
 5. Call `onClose()` and parent's `onUpdate()` to refresh feed
 
 **Placing a Bet:**
-1. User selects YES/NO + amount in `PledgeCard.tsx`
-2. Insert to `bets` table
-3. Update user balance (deduct bet amount)
-4. Call `onUpdate()` callback → parent refetches all pledges
+1. User clicks on a pledge card → opens `PledgeDetailModal.tsx`
+2. User selects YES/NO + amount, sees live payout calculations
+3. Insert to `bets` table
+4. Update user balance (deduct bet amount)
+5. Call `onPlaceBet()` callback → parent (App.tsx) refetches all pledges
 
 **Profile Stats Calculation:**
 1. Query user's pledges: `pledges.select('status').eq('creator_id', user.id)`
@@ -189,26 +202,50 @@ src/
 
 ## Code Conventions
 
-1. **Formatting Utilities:** Date/time helpers are currently inline in components (e.g., `formatDeadline()` repeated in MyPledges, MyBets, PledgeCard). Consider extracting to `/src/utils` folder.
+1. **Utilities Folder:** `/src/utils` exists with `payoutCalculator.ts` for betting calculations including:
+   - `calculatePotentialPayout()` - shows users what they'll win if their bet wins
+   - `calculateOdds()` - converts bet amounts to YES/NO percentages
+   - `calculateAllPayouts()` - splits pool when pledge resolves
+   - `calculateSinglePayout()` - proportional distribution helper
 
 2. **Loading States:** All data-fetching components use `[loading, setLoading]` pattern with `LoadingSpinner` component.
 
-3. **Error Handling:** Currently console.error only - no user-facing error UI. Add toast notifications for production.
+3. **Error Handling:** Currently console.error + browser alerts - no toast notifications yet. Production should add proper toast/snackbar library.
 
-4. **Balance Management:** User balance accessed via `user.user_metadata?.gbp_balance || 1000` (default mock balance). Updated directly in database after each transaction.
+4. **Balance Management:** User balance accessed via `userProfile?.gbp_balance || 1000` (default mock balance, stored in `users` table). Updated directly in database after each transaction. **Warning:** Not transactional yet - potential race conditions.
 
-5. **Type Definitions:** All interfaces in `types/index.ts` with optional nested fields (e.g., `Pledge.creator?: User` for joined queries).
+5. **Type Definitions:** All interfaces in `types/index.ts` (User, Pledge, Bet, VerificationVote) with optional nested fields (e.g., `Pledge.creator?: User` for joined queries).
 
 ## Known Limitations & TODOs
 
-- No React Router - tab-based navigation limits deep linking
-- No optimistic UI updates - relies on refetching after mutations
-- No pagination on pledge feed - could become slow with many pledges
-- Balance updates are not transactional - potential race conditions
-- Verification/voting system not fully implemented (UI exists but logic incomplete)
-- Result calculation & pool distribution logic not implemented
-- `App.tsx` shows demo UI instead of routing to LoginPage/MainApp
-- Profile component uses mock user instead of real useAuth integration
+**Implemented Features:**
+- ✅ Tab-based navigation with 5 tabs (Browse, My Pledges, Make, My Bets, How It Works)
+- ✅ Guest browsing - can view pledges without authentication
+- ✅ Authentication UI - Google OAuth + Magic Link login (LoginForm component)
+- ✅ Auth callback handling - creates/updates user profile automatically (AuthCallback component)
+- ✅ Protected routes - prompts login for creating pledges, placing bets, viewing My Pledges/Bets
+- ✅ Sign In button in header, opens modal with LoginForm
+- ✅ Browse feed showing open pledges with card UI (public, no auth required)
+- ✅ PledgeDetailModal with live odds and payout calculations
+- ✅ Payout calculator utilities (odds, potential payouts, pool distribution)
+- ✅ How It Works informational page (public)
+- ✅ useAuth hook with auth state, user profile, and signOut
+- ✅ Mock user balance system (£1000 default, stored in users table)
+- ✅ Bet placement flow (YES/NO with amount selection)
+- ✅ Pledge creation flow
+- ✅ MyPledges and MyBets components
+
+**Still TODO:**
+- ⚙️ Supabase auth provider configuration (Google OAuth in Google Cloud Console + SMTP for magic links)
+- ❌ No React Router - tab-based navigation limits deep linking
+- ❌ No optimistic UI updates - relies on refetching after mutations
+- ❌ No pagination on pledge feed - could become slow with many pledges
+- ❌ Balance updates are not transactional - potential race conditions
+- ❌ Verification/voting system not implemented (no proof submission UI, no voting)
+- ❌ Result calculation implemented but not triggered (no pledge resolution flow)
+- ❌ No profile/leaderboard UI yet
+- ❌ No real-time updates (no Supabase subscriptions)
+- ❌ No image upload for pledges yet (structure exists but not wired up)
 
 ## Testing Strategy
 

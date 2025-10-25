@@ -3,55 +3,69 @@ import { supabase } from '../lib/supabase'
 
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null)
-      setLoading(false)
+      if (session?.user) {
+        fetchUserProfile(session.user.id)
+      } else {
+        setLoading(false)
+      }
     })
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user || null)
-      setLoading(false)
+      if (session?.user) {
+        await fetchUserProfile(session.user.id)
+      } else {
+        setUserProfile(null)
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  const signInWithEmail = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    })
-    return { error }
-  }
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-  const verifyOtp = async (email: string, token: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    })
-    return { data, error }
+      if (error) {
+        console.error('Error fetching user profile:', error)
+      } else {
+        setUserProfile(data)
+      }
+    } catch (err) {
+      console.error('Error in fetchUserProfile:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
+    if (!error) {
+      setUser(null)
+      setUserProfile(null)
+    }
     return { error }
   }
 
   return {
     user,
+    userProfile,
     loading,
-    signInWithEmail,
-    verifyOtp,
     signOut,
   }
 }
